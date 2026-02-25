@@ -25,12 +25,12 @@ if toolname == 'simulation_evaluation':
 
     # Handle simulation and observation data paths
     sim_data_dir = Path(datapaths["simulation_data"])
-    obs_data_dir = Path(datapaths.get("observation_data", "")) if "observation_data" in datapaths else None
+    #obs_data_dir = Path(datapaths.get("observation_data", "")) if "observation_data" in datapaths else None
 
     # Load data explicitly using provided parameters
     data = load_data(
         simulation_path=sim_data_dir,
-        observation_path=obs_data_dir,
+        observation_path=sim_data_dir,
         index_column=kwargs.index_column,
         observation_column=kwargs.observation_column,
         simulation_column=kwargs.simulation_column

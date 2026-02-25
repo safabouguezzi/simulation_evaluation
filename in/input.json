@@ -1,13 +1,12 @@
 {
-    "simulation_evaluation": {
-        "parameters": {
-            "index_column": "date",
-            "observation_column": "discharge_spec_obs",
-            "simulation_column": "discharge_spec_sim_lstm"
-        },
-        "data": {
-            "simulation_data": "/in/discharge_*.csv",
-            "observation_data": "/in/discharge_*.csv"  
-        }
+  "simulation_evaluation": {
+    "parameters": {
+      "index_column": "date",
+      "observation_column": "discharge_spec_obs",
+      "simulation_column": "discharge_spec_sim_lstm"
+    },
+    "data": {
+      "simulation_data": "/in/discharge_*.csv"
     }
+  }
 }
