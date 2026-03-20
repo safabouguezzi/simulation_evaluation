@@ -3,10 +3,12 @@
     "parameters": {
       "index_column": "date",
       "observation_column": "discharge_spec_obs",
-      "simulation_column": "discharge_spec_sim_lstm"
+      "simulation_column": "discharge_spec_sim_lstm",
+      "location_column": "catchment_id"
     },
     "data": {
-      "simulation_data": "/in/discharge_*.csv"
+      "simulation_data": "/in/CAMELS_simulations.csv",
+      "observation_data": "/in/CAMELS_observations.csv"
     }
   }
 }

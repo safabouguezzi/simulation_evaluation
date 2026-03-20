@@ -24,21 +24,26 @@ if toolname == 'simulation_evaluation':
     start = time()
 
     # Handle simulation and observation data paths
-    sim_data_dir = Path(datapaths["simulation_data"])
-    #obs_data_dir = Path(datapaths.get("observation_data", "")) if "observation_data" in datapaths else None
+    sim_data_path = Path(datapaths["simulation_data"])
+    obs_data_path = Path(datapaths["observation_data"]) if "observation_data" in datapaths else None
+    location_column = getattr(kwargs, "location_column", None)
 
-    # Load data explicitly using provided parameters
+    # Load data:
+    # - Mode 2: location_column set → two combined CSVs grouped by location
+    # - Mode 1: observation_data provided (no location_column) → separate per-location files
+    # - Mode 0: only simulation_data → per-location files with both columns
     data = load_data(
-        simulation_path=sim_data_dir,
-        observation_path=None,
+        simulation_path=sim_data_path,
+        observation_path=obs_data_path,
         index_column=kwargs.index_column,
         observation_column=kwargs.observation_column,
-        simulation_column=kwargs.simulation_column
+        simulation_column=kwargs.simulation_column,
+        location_column=location_column,
     )
     
     data_names = list(data.keys())
     t2 = time()
-    logger.debug(f"Loaded {len(data)} datasets in the {sim_data_dir} folder after {t2 - start:.2f} seconds: [{', '.join(data_names)}]")
+    logger.debug(f"Loaded {len(data)} datasets after {t2 - start:.2f} seconds: [{', '.join(data_names)}]")
 
     # Process data
     catchment_metrics, catchment_datasets = process_data_and_metrics(

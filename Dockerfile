@@ -39,4 +39,4 @@ RUN cd /src/report && npm install
 COPY ./CITATION.cf[f] /src/CITATION.cff
 
 WORKDIR /src
-CMD ["python", "run.py"]
+CMD ["sh", "-c", "python detect_input.py && python run.py"]

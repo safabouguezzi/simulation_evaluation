@@ -1,128 +1,87 @@
-# tool_simulation_evaluation
+# Simulation Evaluation
 
-[![Docker Image CI](https://https://github.com/KIT-HYD/simulation_evaluation/blob/combined-data/.github/workflows/docker-image.yml/badge.svg)](https://github.com/KIT-HYD/simulation_evaluation/blob/combined-data/.github/workflows/docker-image.yml)
+A containerized tool for evaluating hydrological simulations against observations across multiple catchments. It computes standard performance metrics and produces an interactive HTML report with time series plots and statistical summaries.
 
+## How it works
 
-This is a containerized Python tool following the Tool Specification for reusable research software using Docker.
+For each catchment, the tool:
+1. Auto-detects the input mode from the structure of `/in`
+2. Loads observation and simulation time series
+3. Computes performance metrics (NSE, KGE, R², MSE, RMSE)
+4. Writes a metrics summary to `/out`
+5. Generates a self-contained interactive HTML report
 
-Data:
-CAMELS-DE: hydrometeorological time series and attributes for 1582 catchments in Germany
-A. Dolich et al.
-https://doi.org/10.5281/zenodo.13837553
+---
 
-Model code and software:
-Hy2DL: Hybrid Hydrological modeling using Deep Learning methods
-Eduardo Acuña Espinoza et al.
-https://github.com/KIT-HYD/Hy2DL/tree/v1.1
+## Input data
 
-## Description
+The tool supports three input structures, **auto-detected** at runtime — no `input.json` or mode parameter needed. Just mount your data in `/in` with the right structure.
 
-The simulation evaluation tool is designed to assess the performance of hydrological simulations against observed hydrological data. It automates the process
-of loading data from multiple catchments, computing key evaluation metrics, and generating visualizations for a comprehensive analysis. The tool outputs an
-interactive HTML report containing performance summaries, time series plots, and statistical comparisons. The tool also outputs a .csv file conatining all the
-metrics for the cathcments.
-
-## Key features
-
-## 1. Data loading and preprocessing
-
-- Supports loading both simulation and observation data from CSV or Parquet files.
-- Allows flexible structure
-    - Separate files for observed and simulated data
-    - A single file containing both observations and simulations
-- Uses wildcards to match multiple files within directories.
-
-## 2. Performance metrics
- - For each catchment, the tool calculates the most frequently used hydrological performance metrics, such as:
-    - Nash-Sutcliffe Efficiency (NSE)
-    - Kling-Gupta Efficiency (KGE)
-    - Coefficient of determination (R2)
-    - Mean Squared Error (MSE)
-    - Root Mean Squared Error (RMSE)
-
-## 3. Output generation
-
-- Saves results in .csv and .json formats:
-    - metrics_summary.csv - A summary of computed metrics for all cathcments
-    - metrics_summary.json - JSON representation for programmatic access
-- Generates an HTML report containing:
-    - Time series plots for catcments
-    - Performance metric tables
-
-
-## How generic?
-
-Tools using this template can be run by the [toolbox-runner](https://github.com/hydrocode-de/tool-runner). 
-That is only convenience, the tools implemented using this template are independent of any framework.
-
-The main idea is to implement a common file structure inside container to load inputs and outputs of the 
-tool. The template shares this structures with the [R template](https://github.com/vforwater/tool_template_r),
-[NodeJS template](https://github.com/vforwater/tool_template_node) and [Octave template](https://github.com/vforwater/tool_template_octave), 
-but can be mimiced in any container.
-
-Each container needs at least the following structure:
+### Mode 0 — per-location files, both columns in one file
 
 ```
-/
-|- in/
-|  |- parameters.json
-|- out/
-|  |- ...
-|- src/
-|  |- tool.yml
-|  |- run.py
+/in/
+  discharge_5694.csv    ←  columns: date, obs, sim
+  discharge_8731.csv
 ```
 
-* `parameters.json` are parameters. Whichever framework runs the container, this is how parameters are passed.
-* `tool.yml` is the tool specification. It contains metadata about the scope of the tool, the number of endpoints (functions) and their parameters
-* `run.py` is the tool itself, or a Python script that handles the execution. It has to capture all outputs and either `print` them to console or create files in `/out`
+### Mode 1 — per-location files, separate obs and sim
 
-## How to build the image?
-
-You can build the image from within the root of this repo by
 ```
-docker build -t tbr_python_tempate .
-```
-
-Use any tag you like. If you want to run and manage the container with [toolbox-runner](https://github.com/hydrocode-de/tool-runner)
-they should be prefixed by `tbr_` to be recognized. 
-
-Alternatively, the contained `.github/workflows/docker-image.yml` will build the image for you 
-on new releases on Github. You need to change the target repository in the aforementioned yaml.
-
-## How to run?
-
-This template installs the json2args python package to parse the parameters in the `/in/parameters.json`. This assumes that
-the files are not renamed and not moved and there is actually only one tool in the container. For any other case, the environment variables
-`PARAM_FILE` can be used to specify a new location for the `parameters.json` and `TOOL_RUN` can be used to specify the tool to be executed.
-The `run.py` has to take care of that.
-
-To invoke the docker container directly run something similar to:
-```
-docker run --rm -it -v /path/to/local/in:/in -v /path/to/local/out:/out -e TOOL_RUN=foobar tbr_python_template
+/in/
+  obs/
+    discharge_5694.csv    ←  columns: date, obs
+    discharge_8731.csv
+  sim/
+    discharge_5694.csv    ←  columns: date, sim
+    discharge_8731.csv
 ```
 
-Then, the output will be in your local out and based on your local input folder. Stdout and Stderr are also connected to the host.
+Catchments are matched by the last `_`-delimited segment of the filename (`discharge_5694.csv` → `5694`).
 
-With the [toolbox runner](https://github.com/hydrocode-de/tool-runner), this is simplyfied:
+### Mode 2 — two combined files, all catchments
 
-```python
-from toolbox_runner import list_tools
-tools = list_tools() # dict with tool names as keys
-
-foobar = tools.get('foobar')  # it has to be present there...
-foobar.run(result_path='./', foo_int=1337, foo_string="Please change me")
 ```
-The example above will create a temporary file structure to be mounted into the container and then create a `.tar.gz` on termination of all 
-inputs, outputs, specifications and some metadata, including the image sha256 used to create the output in the current working directory.
+/in/
+  all_observations.csv    ←  columns: date, catchment_id, obs
+  all_simulations.csv     ←  columns: date, catchment_id, sim
+```
 
-## What about real tools, no foobar?
+The tool detects Mode 2 when exactly two data files are present in `/in`. It identifies obs vs sim from the filename (expects `obs` to appear in the observation filename). The location column is assumed to be named `catchment_id`.
 
-Yeah. 
+---
 
-1. change the `tool.yml` to describe your actual tool
-2. add any `pip install` or `apt-get install` needed to the dockerfile
-3. add additional source code to `/src`
-4. change the `run.py` to consume parameters and data from `/in` and useful output in `out`
-5. build, run, rock!
+## Column name defaults
+
+The auto-detection script writes `input.json` with these default column names:
+
+| Parameter | Default |
+|---|---|
+| `index_column` | `date` |
+| `observation_column` | `obs` |
+| `simulation_column` | `sim` |
+| `location_column` | `catchment_id` *(Mode 2 only)* |
+
+If your files use different column names, edit `/in/input.json` after the container starts, or provide your own `input.json` before running — the auto-detection will skip writing a new one if it detects one already exists.
+
+---
+
+## Outputs
+
+| File | Description |
+|---|---|
+| `/out/metrics_summary.csv` | Per-catchment metrics table |
+| `/out/metrics_summary.json` | Same data in JSON format |
+| `/out/simulation_report.html` | Self-contained interactive report |
+
+---
+
+## References
+
+**Data:** CAMELS-DE — hydrometeorological time series for 1582 German catchments.
+A. Dolich et al. https://doi.org/10.5281/zenodo.13837553
+
+**Model:** Hy2DL — Hybrid Hydrological modeling using Deep Learning.
+Eduardo Acuña Espinoza et al. https://github.com/KIT-HYD/Hy2DL/tree/v1.1
+
 

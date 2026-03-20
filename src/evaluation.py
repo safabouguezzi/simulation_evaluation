@@ -36,25 +36,19 @@ def load_data(simulation_path: Path,
     *,
     index_column: str,
     observation_column: str,
-    simulation_column: str) -> dict[str, pd.DataFrame]:
+    simulation_column: str,
+    location_column: str | None = None) -> dict[str, pd.DataFrame]:
+    """Load catchment data, auto-detecting the input mode from the provided paths:
+
+    Mode 0 - no observation_path: per-location files each containing both columns.
+    Mode 1 - observation_path resolves to multiple files: separate per-location files.
+    Mode 2 - observation_path resolves to a single file: two combined CSVs grouped by location_column.
+    """
     data = {}
-    
-    sim_files = list(simulation_path.parent.glob(simulation_path.name))
-    obs_files = list(observation_path.parent.glob(observation_path.name)) if observation_path else []
 
-    if obs_files:
-        # Case: Separate files for observation and simulation
-        obs_data = {file.stem.split('_')[-1]: pd.read_csv(file, parse_dates=[index_column]) for file in obs_files}
-        sim_data = {file.stem.split('_')[-1]: pd.read_csv(file, parse_dates=[index_column]) for file in sim_files}
-
-        common_catchments = set(obs_data.keys()) & set(sim_data.keys())
-        for catchment in common_catchments:
-            df_obs = obs_data[catchment][[index_column, observation_column]]
-            df_sim = sim_data[catchment][[index_column, simulation_column]]
-            df = df_obs.merge(df_sim, on=index_column, how='inner')
-            data[catchment] = df
-    else:
-        # Case: Single file containing both observation and simulation data
+    if observation_path is None:
+        # Mode 0: single set of per-location files, each with obs + sim columns.
+        sim_files = list(simulation_path.parent.glob(simulation_path.name))
         for file in sim_files:
             catchment_name = file.stem.split('_')[-1]
             df = pd.read_csv(file, parse_dates=[index_column])
@@ -62,6 +56,33 @@ def load_data(simulation_path: Path,
                 data[catchment_name] = df
             else:
                 print(f"Skipping {file.name} - required columns missing.")
+        return data
+
+    sim_files = list(simulation_path.parent.glob(simulation_path.name))
+    obs_files = list(observation_path.parent.glob(observation_path.name))
+
+    if len(sim_files) > 1 or len(obs_files) > 1:
+        # Mode 1: separate per-location files for observations and simulations.
+        obs_data = {file.stem.split('_')[-1]: pd.read_csv(file, parse_dates=[index_column]) for file in obs_files}
+        sim_data = {file.stem.split('_')[-1]: pd.read_csv(file, parse_dates=[index_column]) for file in sim_files}
+        for catchment in set(obs_data.keys()) & set(sim_data.keys()):
+            df = (
+                obs_data[catchment][[index_column, observation_column]]
+                .merge(sim_data[catchment][[index_column, simulation_column]], on=index_column, how='inner')
+            )
+            data[catchment] = df
+    else:
+        # Mode 2: two combined CSVs, one per dataset, grouped by location_column.
+        if not location_column:
+            raise ValueError("location_column is required when simulation_data and observation_data are single combined files.")
+        df_sim = pd.read_csv(sim_files[0], parse_dates=[index_column])
+        df_obs = pd.read_csv(obs_files[0], parse_dates=[index_column])
+        for loc in set(df_sim[location_column].unique()) & set(df_obs[location_column].unique()):
+            df = (
+                df_obs[df_obs[location_column] == loc][[index_column, observation_column]]
+                .merge(df_sim[df_sim[location_column] == loc][[index_column, simulation_column]], on=index_column, how='inner')
+            )
+            data[str(loc)] = df
 
     return data
 

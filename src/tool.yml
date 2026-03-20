@@ -21,6 +21,13 @@ tools:
         description: |
           Specify the column containing the simulated data. If no column is listed,
           then the tool will use **all** columns that are not index or observation columns.
+      location_column:
+        type: string
+        optional: true
+        description: |
+          Name of the column that identifies the location/catchment in the combined CSV
+          files. Only required when using two combined CSVs (one for all simulations,
+          one for all observations) instead of separate per-location files.
     data:
       simulation_data:
         extension:
