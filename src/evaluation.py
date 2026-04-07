@@ -61,7 +61,7 @@ def load_data(simulation_path: Path,
     sim_files = list(simulation_path.parent.glob(simulation_path.name))
     obs_files = list(observation_path.parent.glob(observation_path.name))
 
-    if len(sim_files) > 1 or len(obs_files) > 1:
+    if len(sim_files) >= 1 or len(obs_files) >= 1:
         # Mode 1: separate per-location files for observations and simulations.
         obs_data = {file.stem.split('_')[-1]: pd.read_csv(file, parse_dates=[index_column]) for file in obs_files}
         sim_data = {file.stem.split('_')[-1]: pd.read_csv(file, parse_dates=[index_column]) for file in sim_files}
