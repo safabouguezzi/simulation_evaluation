@@ -149,18 +149,17 @@ def create_output_resources_compressed(
 def build_report():
     logger.info("build Report- simulation evaluation")
     try:
-        report_src = Path('.') / "report"
-        print(report_src)
+        report_src = Path(".") / "report"
 
-        subprocess.run(["npm", "install"], cwd=report_src)
-        subprocess.run(["npm", "run", "build"], cwd=report_src)
+        subprocess.run(["npm", "install"], cwd=report_src, check=True)
+        subprocess.run(["npm", "run", "build"], cwd=report_src, check=True)
 
-        # shutil.copy(report_src / "build" / "index.html", "/out/simulation_report.html")
-        # run gulp bundler after build
-        subprocess.run(["npx", "gulp", "build"], cwd=report_src)
+        # creates /out/report.html according to gulpfile.js
+        subprocess.run(["npx", "gulp", "build"], cwd=report_src, check=True)
 
-        # copy bundled file instead
-        shutil.copy(report_src / "build" / "report.html", "/out/simulation_report.html")
-        
+        # final file expected by your portal
+        shutil.copy("/out/report.html", "/out/simulation_report.html")
+
     except Exception as e:
-        logger.info(str(e))
+        logger.exception(f"Failed to build report: {e}")
+        raise
