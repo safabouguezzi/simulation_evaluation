@@ -154,11 +154,16 @@ def build_report():
         subprocess.run(["npm", "install"], cwd=report_src, check=True)
         subprocess.run(["npm", "run", "build"], cwd=report_src, check=True)
 
-        # creates /out/report.html according to gulpfile.js
+        # creates /out/report.html from gulpfile.js
         subprocess.run(["npx", "gulp", "build"], cwd=report_src, check=True)
 
-        # final file expected by your portal
+        if not Path("/out/report.html").is_file():
+            raise FileNotFoundError("Expected bundled report not found: /out/report.html")
+
         shutil.copy("/out/report.html", "/out/simulation_report.html")
+
+        if not Path("/out/simulation_report.html").is_file():
+            raise FileNotFoundError("simulation_report.html was not created")
 
     except Exception as e:
         logger.exception(f"Failed to build report: {e}")
