@@ -155,6 +155,12 @@ def build_report():
         subprocess.run(["npm", "install"], cwd=report_src)
         subprocess.run(["npm", "run", "build"], cwd=report_src)
 
-        shutil.copy(report_src / "build" / "index.html", "/out/simulation_report.html")
+        # shutil.copy(report_src / "build" / "index.html", "/out/simulation_report.html")
+        # run gulp bundler after build
+        subprocess.run(["npx", "gulp", "build"], cwd=report_src)
+
+        # copy bundled file instead
+        shutil.copy(report_src / "build" / "report.html", "/out/simulation_report.html")
+        
     except Exception as e:
         logger.info(str(e))
