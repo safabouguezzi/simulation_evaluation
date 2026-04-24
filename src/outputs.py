@@ -155,7 +155,21 @@ def build_report():
         subprocess.run(["npm", "run", "build"], cwd=report_src, check=True)
 
         # creates /out/report.html from gulpfile.js
-        subprocess.run(["npx", "gulp", "build"], cwd=report_src, check=True)
+        result = subprocess.run(
+            ["npx", "gulp", "build"],
+            cwd=report_src,
+            text=True,
+            capture_output=True
+        )
+
+        logger.info("GULP stdout:\n%s", result.stdout)
+
+        if result.stderr:
+            logger.warning("GULP stderr:\n%s", result.stderr)
+
+        result.check_returncode()
+
+        shutil.copy("/out/report.html", "/out/simulation_report.html")
 
         if not Path("/out/report.html").is_file():
             raise FileNotFoundError("Expected bundled report not found: /out/report.html")
@@ -165,6 +179,6 @@ def build_report():
         if not Path("/out/simulation_report.html").is_file():
             raise FileNotFoundError("simulation_report.html was not created")
 
-    except Exception as e:
-        logger.exception(f"Failed to build report: {e}")
-        raise
+    except Exception:
+        logger.exception("Bundled report failed, falling back to Svelte index.html")
+        shutil.copy(report_src / "build" / "index.html", "/out/simulation_report.html")
